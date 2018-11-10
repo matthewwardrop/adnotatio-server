@@ -6,12 +6,12 @@ from flask import current_app, Response
 
 
 def jsonapify(data=None, errors=None):
-    if data is not None and errors is not None:
+    if data is None and errors is None:
         raise RuntimeError("Either data or errors MUST be provided.")
-    if data and errors:
+    if data is not None and errors is not None:
         raise RuntimeError("You cannot specify both data and errors.")
 
-    if data:
+    if data is not None:
         content = {'data': data}
         status = 200
     else:
