@@ -1,6 +1,6 @@
 import json
 
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Text
+from sqlalchemy import BigInteger, Boolean, Column, ForeignKey, String, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relationship
 
@@ -43,8 +43,8 @@ class Comment(Base):
     author_email = Column(String, ForeignKey('authors.email'))
     author = relationship(Author, lazy="joined")
 
-    ts_created = Column(Integer)
-    ts_updated = Column(Integer)
+    ts_created = Column(BigInteger)
+    ts_updated = Column(BigInteger)
 
     is_resolved = Column(Boolean)
 
