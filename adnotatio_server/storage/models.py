@@ -40,7 +40,7 @@ class Comment(Base):
     text = Column(Text)
     annotations = Column(Text)  # JSON
 
-    author_email = Column(Integer, ForeignKey('authors.email'))
+    author_email = Column(String, ForeignKey('authors.email'))
     author = relationship(Author, lazy="joined")
 
     ts_created = Column(Integer)
