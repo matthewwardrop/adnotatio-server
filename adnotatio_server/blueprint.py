@@ -88,14 +88,7 @@ class AdnotatioApiBlueprint(Blueprint):
 
     def db_init(self):
         self.db = init_db(self.db_uri)
-        if self.db_revision is None:
-            # Create all tables
-            self.db = init_db(self.db_uri)
-
-            # Stamp table as being current
-            Base.metadata.create_all(bind=self.db.session_factory.kw['bind'])
-            command.stamp(self._alembic_config, "head")
-        elif self.db_auto_upgrade:
+        if self.db_revision is None or self.db_auto_upgrade:
             self.db_upgrade()
         return self
 
