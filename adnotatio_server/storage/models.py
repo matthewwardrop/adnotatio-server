@@ -1,6 +1,6 @@
 import json
 
-from sqlalchemy import BigInteger, Boolean, Column, ForeignKey, String, Text
+from sqlalchemy import BigInteger, Boolean, Column, ForeignKey, Integer, String, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relationship
 
@@ -11,36 +11,39 @@ Base = declarative_base()
 
 
 @unique_constructor(
-    lambda email: email,
-    lambda query, email: query.filter(Author.email == email)
+    lambda id=None, email=None: (id, email),
+    lambda query, id=None, email=None: query.filter(Author.id == id) if id is not None else query.filter(Author.email == email)
 )
 class Author(Base):
     __tablename__ = 'authors'
 
-    email = Column(String, primary_key=True)
-    name = Column(String)
-    avatar = Column(String)
+    id = Column(Integer, primary_key=True)
+    email = Column(String(512), index=True)
+    name = Column(String(512))
+    avatar = Column(String(1024))
 
 
 @unique_constructor(
-    lambda uuid: uuid,
-    lambda query, uuid: query.filter(Comment.uuid == uuid)
+    lambda id=None, uuid=None: (id, uuid),
+    lambda query, id=None, uuid=None: query.filter(Comment.uuid == uuid) if uuid is not None else query.filter(Comment.id == id)
 )
 class Comment(Base):
     __tablename__ = 'comments'
 
-    uuid = Column(String, primary_key=True)
+    id = Column(Integer, primary_key=True)
 
-    authority = Column(String)
-    document_id = Column(String)
-    document_version = Column(String)
+    uuid = Column(String(512), index=True)
 
-    reply_to = Column(String, ForeignKey('comments.uuid'))
+    authority = Column(String(512))
+    document_id = Column(String(512))
+    document_version = Column(String(512))
+
+    reply_to_id = Column(Integer, ForeignKey('comments.id'))
 
     text = Column(Text)
     annotations = Column(Text)  # JSON
 
-    author_email = Column(String, ForeignKey('authors.email'))
+    author_id = Column(Integer, ForeignKey('authors.id'))
     author = relationship(Author, lazy="joined")
 
     ts_created = Column(BigInteger)
@@ -49,7 +52,9 @@ class Comment(Base):
     is_resolved = Column(Boolean)
 
     replies = relationship(
-        "Comment", backref=backref('host', remote_side=[uuid])
+        'Comment',
+        backref=backref('reply_to', remote_side=[id]),
+        lazy='select'
     )
 
     @classmethod
@@ -64,15 +69,16 @@ class Comment(Base):
 
         assert comment.author is None or comment.author.email == author_info.email
 
-        comment.reply_to = d.get('replyTo')
+        comment.reply_to_id = Comment(uuid=d.get('replyTo')).id if d.get('replyTo') else None
         comment.text = d.get('text')
         comment.annotations = json.dumps(d.get('annotations'))
 
-        comment.author_email = author_info.email
-        if comment.author_email:
-            comment.author = Author(email=comment.author_email)
+        if author_info.email:
+            comment.author = Author(email=author_info.author_email)
             comment.author.name = author_info.name
             comment.author.avatar = author_info.avatar
+        else:
+            comment.author = None
 
         comment.ts_created = d.get('tsCreated')
         comment.ts_updated = d.get('tsUpdated')
@@ -89,10 +95,10 @@ class Comment(Base):
                 'documentId': self.document_id,
                 'documentVersion': self.document_version
             },
-            'replyTo': self.reply_to,
+            'replyTo': self.reply_to.uuid if self.reply_to else None,
             'text': self.text,
-            'annotations': json.loads(self.annotations),
-            'authorEmail': self.author_email,
+            'annotations': json.loads(self.annotations) if self.annotations else None,
+            'authorEmail': self.author.email if self.author else None,
             'authorName': self.author.name if self.author else None,
             'authorAvatar': self.author.avatar if self.author else None,
             'tsCreated': self.ts_created,

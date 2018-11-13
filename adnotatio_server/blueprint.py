@@ -1,22 +1,34 @@
+import os
+
+from alembic import command
+from alembic.config import Config as AlembicConfig
+from alembic.migration import MigrationContext
 from flask import Blueprint, request
 
 from .auth import default_author_resolver
 from .jsonapi import jsonapify_wrap
 from .storage.database import init_db
-from .storage.models import Comment
+from .storage.models import Base, Comment
 
 
 class AdnotatioApiBlueprint(Blueprint):
 
-    def __init__(self, db_uri='sqlite:////tmp/adnotatio.db', author_resolver=None, enable_cors=False):
+    def __init__(self, db_uri='sqlite:////tmp/adnotatio.db', db_auto_upgrade=True, author_resolver=None, enable_cors=False):
         Blueprint.__init__(self, 'adnotatio', __name__)
         self.author_resolver = author_resolver or default_author_resolver
         self.enable_cors = enable_cors
+        self.db_uri = db_uri
+        self.db_auto_upgrade = db_auto_upgrade
 
         @self.before_app_first_request
         def init():
             """Docstring for public function."""
-            self.db = init_db(db_uri)
+            self.db_init()
+
+        @self.before_request
+        def clear_cache():
+            if hasattr(self.db, '_unique_cache'):
+                del self.db._unique_cache
 
         if enable_cors:
             @self.after_request
@@ -28,34 +40,89 @@ class AdnotatioApiBlueprint(Blueprint):
 
         @self.route('/comments')
         @jsonapify_wrap
-        def load():
+        def comments():
+            """Return all comments associated with a particular document."""
+
             return list(
                 {'type': 'comments', 'id': c.uuid, 'attributes': c.toJSON()}
                 for c in self.db.query(Comment).filter(
                     Comment.authority == request.args.get('authority'),
-                    Comment.document_id == request.args.get('documentId'),
-                    Comment.document_version == request.args.get('documentVersion')
+                    Comment.document_id == request.args.get('documentId')
                 ).all()
             )
 
         @self.route('/comments/<uuid>')
         @jsonapify_wrap
-        def get(uuid):
+        def get_comment(uuid):
+            """Return a comment identified by its uuid in a given document context."""
 
-            context = {
-                "authority": request.args.get('authority'),
-                "documentId": request.args.get('documentId'),
-                "documentVersion": request.args.get('documentVersion'),
-                "documentAuthorEmails": request.args.get('documentAuthorEmails')
+            comment = self.db.query(Comment).filter(
+                Comment.authority == request.args.get('authority'),
+                Comment.document_id == request.args.get('documentId'),
+                Comment.uuid == uuid
+            ).first()
+
+            if not comment:
+                raise ValueError("Unknown comment for uuid '{}'.".format(uuid))
+
+            return {
+                'type': 'comments',
+                'id': comment.uuid,
+                'attributes': comment.toJSON()
             }
-            context.update(request.args)
-
-            return self.db[context['uuid'][0]]
 
         @self.route('/comments/<uuid>', methods=['put', 'patch'])
         @jsonapify_wrap
-        def post(uuid):
-            from .storage.models import Comment
-            self.db.add(Comment.fromJSON(request.json.get('data', {}).get('attributes'), author_info=self.author_resolver()))
+        def put_comment(uuid):
+            """Update the attributes for a given comment."""
+
+            comment = Comment.fromJSON(request.json.get('data', {}).get('attributes'), author_info=self.author_resolver())
+            self.db.add(comment)
             self.db.commit()
-            return True
+
+            return {
+                'type': 'comments',
+                'id': comment.uuid,
+                'attributes': comment.toJSON()
+            }
+
+    def db_init(self):
+        self.db = init_db(self.db_uri)
+        if self.db_revision is None:
+            # Create all tables
+            self.db = init_db(self.db_uri)
+
+            # Stamp table as being current
+            Base.metadata.create_all(bind=self.db.session_factory.kw['bind'])
+            command.stamp(self._alembic_config, "head")
+        elif self.db_auto_upgrade:
+            self.db_upgrade()
+        return self
+
+    @property
+    def db_revision(self):
+        conn = self.db.connection()
+
+        context = MigrationContext.configure(conn)
+        return context.get_current_revision()
+
+    def db_create_revision(self, message, autogenerate=True):
+        command.revision(self._alembic_config, message=message, autogenerate=autogenerate)
+        return self
+
+    def db_upgrade(self):
+        command.upgrade(self._alembic_config, "head")
+        return self
+
+    def db_downgrade(self, revision):
+        command.downgrade(self._alembic_config, revision)
+        return self
+
+    @property
+    def _alembic_config(self):
+        dir = os.path.join(os.path.dirname(__file__), 'migrations')
+        config = AlembicConfig(os.path.join(dir, 'alembic.ini'))
+        config.set_main_option('script_location', dir)
+        config.set_main_option('sqlalchemy.url', self.db_uri)
+        config.set_main_option('adnotatio_server_path', os.path.dirname(__file__))
+        return config

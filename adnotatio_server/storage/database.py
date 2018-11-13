@@ -13,6 +13,4 @@ def init_db(db='sqlite:///::memory::'):
         db = scoped_session(sessionmaker(autocommit=False,
                                          autoflush=False,
                                          bind=db))
-
-    Base.metadata.create_all(bind=db.session_factory.kw['bind'])
     return db
