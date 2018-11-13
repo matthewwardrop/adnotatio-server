@@ -13,6 +13,7 @@ def parse_args(args):
     argparser.add_argument('-p', '--port', type=int, default=8000, help='Port for HTTP server (default=%d).' % 8000)
     argparser.add_argument('-d', '--debug', action='store_true', default=False, help='Debug mode.')
     argparser.add_argument('--enable-cors', action='store_true', default=False, help='Enable CORS policy allowing cross-domain access.')
+    argparser.add_argument('--db-uri', default='sqlite:////tmp/adnotatio.db')
     return argparser.parse_args(args)
 
 
@@ -28,7 +29,7 @@ def main(**overrides):
         setattr(args, key, value)
 
     app = Flask(__name__)
-    app.register_blueprint(AdnotatioApiBlueprint(enable_cors=args.enable_cors), url_prefix='/api')
+    app.register_blueprint(AdnotatioApiBlueprint(enable_cors=args.enable_cors, db_uri=args.db_uri), url_prefix='/api')
 
     logger.info('Starting server on port %s with debug=%s', args.port, args.debug)
     app.run(host='0.0.0.0', port=args.port, debug=args.debug, threaded=False)
