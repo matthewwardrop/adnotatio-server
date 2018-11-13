@@ -8,7 +8,7 @@ from flask import Blueprint, request
 from .auth import default_author_resolver
 from .jsonapi import jsonapify_wrap
 from .storage.database import init_db
-from .storage.models import Base, Comment
+from .storage.models import Comment
 
 
 class AdnotatioApiBlueprint(Blueprint):

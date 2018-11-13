@@ -5,12 +5,13 @@ __all__ = [
 
 __author__ = "Matthew Wardrop"
 __author_email__ = "mpwardrop@gmail.com"
-__version__ = "0.0.6"
+__version__ = "0.1.0"
 __git_uri__ = "https://github.com/matthewwardrop/adnotatio-server.git"
 
 
 __dependencies__ = [
     'flask',
     'sqlalchemy',
+    'alembic',
     'decorator'
 ]

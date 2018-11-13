@@ -2,8 +2,6 @@ from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 
-from .models import Base
-
 
 def init_db(db='sqlite:///::memory::'):
 
