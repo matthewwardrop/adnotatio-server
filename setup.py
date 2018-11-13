@@ -15,6 +15,7 @@ setup(
     author_email=version_info['__author_email__'],
     packages=find_packages(),
     install_requires=version_info['__dependencies__'],
+    include_package_data=True,
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Environment :: Console',
