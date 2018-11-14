@@ -74,7 +74,7 @@ class Comment(Base):
         comment.annotations = json.dumps(d.get('annotations'))
 
         if author_info.email:
-            comment.author = Author(email=author_info.author_email)
+            comment.author = Author(email=author_info.email)
             comment.author.name = author_info.name
             comment.author.avatar = author_info.avatar
         else:
