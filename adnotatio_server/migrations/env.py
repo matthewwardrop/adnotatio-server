@@ -27,9 +27,6 @@ if config.get_main_option('adnotatio_server_path'):
 from adnotatio_server.storage.models import Base
 target_metadata = Base.metadata
 
-print(target_metadata)
-print(config.get_main_option('sqlalchemy.url'))
-
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
