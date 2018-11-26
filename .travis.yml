@@ -1,0 +1,21 @@
+language: python
+python:
+- '2.7'
+- '3.4'
+- '3.5'
+- '3.6'
+install:
+- pip install tox-travis
+- pip install .
+script:
+- tox
+deploy:
+  provider: pypi
+  user: mister.wardrop
+  password:
+    secure: D4LAV/KVN4+T31WT0aID2bxQCtQ9H4foanu6FdpzLGqNBOVnJUTrg8pfnEKSYW8UEy+JoHlDPGZr/fvTKNNXMyzXa4Li2XjiJRobqL+c8SDQJWYP609Q8U6AqDcFHPEyKxxDlfj8SR5KYNhZo8UZM9xbitLkq6j03STJjuBqIa9mpGuPSOLe5/uhZluxv/61NFjM5n3h6Auea7DMg2ySEUEt+o95qrZhiGx9/Xj4HqwwfUKUkAxzOY6AmwokM/1z8dgC/CNUsgff+WcYbfuZVMsj9URIlLAELjyyij26Vmq4cpcD/KNC8CFkWeS1ablmhdMHRLbc+HoeZyXhwggXyRP25CQVjKQRLqsVikS1s/Az5H7Bq+r0MViVcWpmNEh49XKXwgQ6z9n+g1ViNNtiCLz2prGXQmfY/K8GRtS3yeLNNwdufdq4Crcgc2wp499TkBBuqE/1GE2i1UYafj2MDDLe2CPTwuCUtc/hk087C7kNNPv04lbLZ3Xe908pBvog+IKsFO3j5GaFPYPPQ/ZwnRo+nqwFK5VhwVco37xtYlQ4V8f0dbg+gkfxM3KXVKkI+0mfu0MtvyE387nFo5VtFHDZtmClvJRnlVSmkVfkp72haSa/Hq1RH8MftVY1werquB0ZvMq18r7YFb0zHhFEzFS8gTbMnTUDAHwS6hDfpT4=
+  on:
+    tags: true
+    distributions: sdist
+    repo: matthewwardrop/adnotatio-server
+    condition: $TRAVIS_PYTHON_VERSION = "3.6"
