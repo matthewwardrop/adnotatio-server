@@ -38,6 +38,21 @@ class AdnotatioApiBlueprint(Blueprint):
                 response.headers.add('Access-Control-Allow-Methods', 'GET,PATCH,PUT,POST,DELETE,OPTIONS')
                 return response
 
+        @self.route('/whoami')
+        @jsonapify_wrap
+        def whoami():
+            """Returns information about the user, in particular their name, email and avatar uri."""
+            author_info = self.author_resolver()
+            return {
+                'type': 'authors',
+                'id': author_info.email,
+                'attributes': {
+                    'name': author_info.name,
+                    'email': author_info.email,
+                    'avatar': author_info.avatar
+                }
+            }
+
         @self.route('/comments')
         @jsonapify_wrap
         def comments():
