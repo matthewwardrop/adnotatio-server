@@ -4,6 +4,7 @@ import sys
 
 from flask import Flask
 
+from adnotatio_server.auth import AdnotatioAuthorInfo
 from adnotatio_server.blueprint import AdnotatioApiBlueprint
 
 
@@ -30,7 +31,14 @@ def main(**overrides):
         setattr(args, key, value)
 
     app = Flask(__name__)
-    app.register_blueprint(AdnotatioApiBlueprint(enable_cors=args.enable_cors, db_uri=args.db_uri), url_prefix='/api')
+    app.register_blueprint(
+        AdnotatioApiBlueprint(
+            enable_cors=args.enable_cors,
+            db_uri=args.db_uri,
+            author_resolver=lambda: AdnotatioAuthorInfo("Dummy User", "dummy@dummy.com", None)
+        ),
+        url_prefix='/api'
+    )
 
     if args.db_create_revision is not None:
         app.blueprints['adnotatio'].db_create_revision(args.db_create_revision)

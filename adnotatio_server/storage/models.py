@@ -67,7 +67,7 @@ class Comment(Base):
         comment.document_id = d['context']['documentId']
         comment.document_version = d['context']['documentVersion']
 
-        assert comment.author is None or comment.author.email == author_info.email
+        assert comment.author is None or comment.author.email == author_info.email, "Author mismatch (upstream: {}, current: {}).".format(comment.author.email, author_info.email)
 
         comment.reply_to_id = Comment(uuid=d.get('replyTo')).id if d.get('replyTo') else None
         comment.text = d.get('text')
