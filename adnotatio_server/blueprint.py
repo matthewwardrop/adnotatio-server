@@ -1,3 +1,4 @@
+import logging
 import os
 
 from alembic import command
@@ -13,12 +14,14 @@ from .storage.models import Comment
 
 class AdnotatioApiBlueprint(Blueprint):
 
-    def __init__(self, db_uri='sqlite:////tmp/adnotatio.db', db_auto_upgrade=True, author_resolver=None, enable_cors=False):
+    def __init__(self, db_uri='sqlite:////tmp/adnotatio.db', db_auto_upgrade=True,
+                 author_resolver=None, enable_cors=False, event_callback=None):
         Blueprint.__init__(self, 'adnotatio', __name__)
         self.author_resolver = author_resolver or default_author_resolver
         self.enable_cors = enable_cors
         self.db_uri = db_uri
         self.db_auto_upgrade = db_auto_upgrade
+        self.event_callback = event_callback or (lambda action, **kwargs: logging.debug("%s %s", action, kwargs))
 
         @self.before_app_first_request
         def init():
@@ -91,9 +94,18 @@ class AdnotatioApiBlueprint(Blueprint):
         def put_comment(uuid):
             """Update the attributes for a given comment."""
 
-            comment = Comment.fromJSON(request.json.get('data', {}).get('attributes'), author_info=self.author_resolver())
+            author_info = self.author_resolver()
+
+            comment = Comment.fromJSON(request.json.get('data', {}).get('attributes'), author_info=author_info)
             self.db.add(comment)
             self.db.commit()
+
+            self.event_callback(
+                'comment_put',
+                context=request.json.get('data', {}).get('attributes', {}).get('context'),
+                comment=comment.toJSON(),
+                author_info=author_info
+            )
 
             return {
                 'type': 'comments',
@@ -113,8 +125,34 @@ class AdnotatioApiBlueprint(Blueprint):
             if not comment:
                 raise ValueError("Unknown comment for uuid '{}'.".format(uuid))
 
-            self.db.add(comment.apply_patch(request.json.get('data', {}).get('attributes'), author_info=self.author_resolver()))
+            patch_context = request.json.get('data', {}).get('attributes', {}).get('context', {})
+            comment_context = {
+                'authority': comment.authority,
+                'documentId': comment.document_id,
+                'documentVersion': comment.document_version
+            }
+            for field in ['authority', 'documentId']:
+                if patch_context.get(field) != comment_context.get(field):
+                    raise ValueError(
+                        "Context of patch ({}) does not match context of comment "
+                        "({}); either `authority` or `documentId` do not match."
+                        .format(
+                            patch_context,
+                            comment_context
+                        )
+                    )
+
+            author_info = self.author_resolver()
+
+            self.db.add(comment.apply_patch(request.json.get('data', {}).get('attributes', {}).get('patch', {}), author_info=author_info))
             self.db.commit()
+
+            self.event_callback(
+                'comment_patch',
+                context=request.json.get('data', {}).get('attributes', {}).get('context'),
+                patch=request.json.get('data', {}).get('attributes', {}).get('patch'),
+                author_info=author_info
+            )
 
             return {
                 'type': 'comments',
