@@ -86,13 +86,34 @@ class AdnotatioApiBlueprint(Blueprint):
                 'attributes': comment.toJSON()
             }
 
-        @self.route('/comments/<uuid>', methods=['put', 'patch'])
+        @self.route('/comments/<uuid>', methods=['put'])
         @jsonapify_wrap
         def put_comment(uuid):
             """Update the attributes for a given comment."""
 
             comment = Comment.fromJSON(request.json.get('data', {}).get('attributes'), author_info=self.author_resolver())
             self.db.add(comment)
+            self.db.commit()
+
+            return {
+                'type': 'comments',
+                'id': comment.uuid,
+                'attributes': comment.toJSON()
+            }
+
+        @self.route('/comments/<uuid>', methods=['patch'])
+        @jsonapify_wrap
+        def patch_comment(uuid):
+            """Update the attributes for a given comment."""
+
+            comment = self.db.query(Comment).filter(
+                Comment.uuid == uuid
+            ).first()
+
+            if not comment:
+                raise ValueError("Unknown comment for uuid '{}'.".format(uuid))
+
+            self.db.add(comment.apply_patch(request.json.get('data', {}).get('attributes'), author_info=self.author_resolver()))
             self.db.commit()
 
             return {

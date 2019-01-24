@@ -1,3 +1,5 @@
+import re
+
 from flask import current_app
 
 
@@ -55,3 +57,11 @@ def unique_constructor(hashfunc, queryfunc):
         return cls
 
     return decorate
+
+
+def to_camel_case(name):
+    return re.sub('(?<=(.))_(.)', lambda m: m.group(2).upper(), name)
+
+
+def to_snake_case(name):
+    return re.sub('(.)(?=([A-Z]))', r'\1_', name).lower()

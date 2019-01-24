@@ -4,7 +4,7 @@ from sqlalchemy import BigInteger, Boolean, Column, ForeignKey, Integer, String,
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relationship
 
-from .util import unique_constructor
+from .util import to_snake_case, unique_constructor
 
 
 Base = declarative_base()
@@ -105,3 +105,20 @@ class Comment(Base):
             'tsUpdated': self.ts_updated,
             'isResolved': self.is_resolved
         }
+
+    def is_author(self, author_info):
+        return self.author is not None and self.author.email == author_info.email
+
+    def apply_patch(self, patch, author_info):
+        illegal_fields = set(patch.keys()).difference(self.patchable_fields_for_user(author_info))
+        if illegal_fields:
+            raise RuntimeError("User {} attempted to modify illegal fields: {}".format(author_info.email, illegal_fields))
+
+        for attribute, value in patch.items():
+            setattr(self, to_snake_case(attribute), value)
+        return self
+
+    def patchable_fields_for_user(self, author_info):
+        if self.is_author(author_info):
+            return ['text', 'authorName', 'authorAvatar', 'isResolved']
+        return ['isResolved']
