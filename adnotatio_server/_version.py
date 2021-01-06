@@ -5,7 +5,7 @@ __all__ = [
 
 __author__ = "Matthew Wardrop"
 __author_email__ = "mpwardrop@gmail.com"
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 __git_uri__ = "https://github.com/matthewwardrop/adnotatio-server.git"
 
 
