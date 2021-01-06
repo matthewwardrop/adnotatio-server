@@ -1,4 +1,5 @@
 import json
+import time
 
 from sqlalchemy import BigInteger, Boolean, Column, ForeignKey, Integer, String, Text
 from sqlalchemy.ext.declarative import declarative_base
@@ -71,7 +72,7 @@ class Comment(Base):
 
         comment.reply_to_id = Comment(uuid=d.get('replyTo')).id if d.get('replyTo') else None
         comment.text = d.get('text')
-        comment.annotations = json.dumps(d.get('annotations'))
+        comment.annotations = json.dumps(d.get('annotations', []))
 
         if author_info.email:
             comment.author = Author(email=author_info.email)
@@ -80,10 +81,11 @@ class Comment(Base):
         else:
             comment.author = None
 
-        comment.ts_created = d.get('tsCreated')
-        comment.ts_updated = d.get('tsUpdated')
+        if not comment.ts_created:
+            comment.ts_created = int(time.time() * 1000)
+        comment.ts_updated = int(time.time() * 1000)
 
-        comment.is_resolved = d.get('isResolved')
+        comment.is_resolved = d.get('isResolved', False)
 
         return comment
 
