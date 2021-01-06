@@ -65,7 +65,8 @@ class AdnotatioApiBlueprint(Blueprint):
                 {'type': 'comments', 'id': c.uuid, 'attributes': c.toJSON()}
                 for c in self.db.query(Comment).filter(
                     Comment.authority == request.args.get('authority'),
-                    Comment.document_id == request.args.get('documentId')
+                    Comment.document_id == request.args.get('documentId'),
+                    not request.args.get('since') or Comment.ts_updated >= request.args.get('since')
                 ).all()
             )
 
@@ -149,6 +150,7 @@ class AdnotatioApiBlueprint(Blueprint):
 
             self.event_callback(
                 'comment_patch',
+                comment_uuid=uuid,
                 context=request.json.get('data', {}).get('attributes', {}).get('context'),
                 patch=request.json.get('data', {}).get('attributes', {}).get('patch'),
                 author_info=author_info
